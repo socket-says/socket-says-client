@@ -34,7 +34,8 @@ const socket = io(`http://localhost:${PORT}`);
 //   input: process.stdin,
 //   output: process.stdout,
 // });
-const prompt = require('prompt');
+// const prompt = require('prompt');
+const inquirer = require('inquirer');
 
 const join = 'join';
 
@@ -91,24 +92,51 @@ const join = 'join';
 socket.emit('JOIN', join);
 
 socket.on('LOG_IN', () => {
-  prompt.start();
-  prompt.get(['username', 'password'], function (err, result) {
-    if (err) {
-      return onErr(err);
-    }
-    console.log('Command-line input received:');
-    console.log('  Username: ' + result.username);
-    console.log('  Password: ' + result.password);
-    let payload = {
-      username: result.username,
-      password: result.password,
-      sequence: getFirstSequence(),
-      score: 0,
-    };
-    if (result.username && result.password) {
-      socket.emit('LOGGED_IN', payload);
-    }
-  });
+  // prompt.start();
+  // prompt.get(['username', 'password'], function (err, result) {
+  //   if (err) {
+  //     return onErr(err);
+  //   }
+  //   console.log('Command-line input received:');
+  //   console.log('  Username: ' + result.username);
+  //   console.log('  Password: ' + result.password);
+  //   let payload = {
+  //     username: result.username,
+  //     password: result.password,
+  //     sequence: getFirstSequence(),
+  //     score: 0,
+  //   };
+
+  // let answers;
+
+  inquirer
+    .prompt([
+      {
+        type: 'input',
+        name: 'username',
+        message: 'What is your username?',
+      },
+      {
+        type: 'input',
+        name: 'password',
+        message: 'What is your password?',
+      },
+    ])
+    .then(answers => {
+      console.info('Username:', answers);
+    });
+
+  let payload = {
+    username: answers.username,
+    password: answers.password,
+    sequence: getFirstSequence(),
+    score: 0,
+  };
+
+  if (answers.username && answers.password) {
+    socket.emit('LOGGED_IN', payload);
+  }
+
 });
 
 socket.on('START', (payload) => {
