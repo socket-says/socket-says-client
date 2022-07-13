@@ -2,13 +2,10 @@
 
 const { io } = require('socket.io-client');
 require('dotenv').config();
-const PORT =  process.env.PORT || 3002;
+const PORT = process.env.PORT || 3002;
 const socket = io(`http://localhost:${PORT}/socket-says`);
 const inquirer = require('inquirer');
 const chalk = require('chalk');
-const join = 'join';
-
-socket.emit('JOIN', join);
 
 socket.on('LOG_IN', () => {
 
@@ -19,6 +16,57 @@ socket.on('LOG_IN', () => {
         name: 'username',
         message: 'What is your username?',
       },
+    ])
+    .then(answers => {
+      console.info(chalk.cyan('Username:', answers.username));
+      let payload = {
+        user: {
+          Username: answers.username,
+        },
+      };
+      socket.emit('CHECK_USERNAME', payload);
+    });
+
+});
+
+socket.on('PLAYER_EXISTS', (payload) => {
+  inquirer
+    .prompt([
+      {
+        type: 'input',
+        name: 'password',
+        message: 'What is your password?',
+      },
+    ])
+    .then((answers) => {
+
+      payload.user.Password = answers.password;
+      payload.user.Highscore = 0;
+      payload.sequence = getRandomColor() + ' ';
+
+      console.log('player exists payload after adding pass/highscore: ', payload);
+
+      if (payload.user.Username && answers.password) {
+        console.log('payload.user.username && answers.password');
+        socket.emit('AUTHENTICATED', payload);
+      }
+
+      // authenticate password
+
+      //if answers.username && answers.password(authenticated) {
+      // socket.emit('AUTHENTICATED', payload);
+      // }
+
+    });
+
+});
+
+socket.on('NEW_PLAYER', (payload) => {
+
+  console.log('Username does not exist, create your account by inputting a password');
+
+  inquirer
+    .prompt([
       {
         type: 'input',
         name: 'password',
@@ -26,23 +74,20 @@ socket.on('LOG_IN', () => {
       },
     ])
     .then(answers => {
-      console.info(chalk.cyan('Username:', answers.username));
-      console.info(chalk.red('Password:', answers.password));
-      let payload = {
-        username: answers.username,
-        password: answers.password,
-        sequence: getRandomColor() + ' ',
-        score: 0,
-      };
-      if (answers.username && answers.password) {
-        socket.emit('CHECK_DB', payload);
-      }
-    });
+      payload.user.Password = answers.password;
+      payload.user.Highscore = 0;
+      payload.sequence = getRandomColor() + ' ';
 
+      console.log('new player, payload after adding pass/highscore: ', payload);
+
+      socket.emit('CREATE', payload);
+
+    });
 });
 
-socket.on('CHECKED_DB', (payload) => {
-  socket.emit('LOGGED_IN');
+socket.on('CREATED_NEW', (payload) => {
+  console.log('Your account has been created, you may now join');
+  socket.emit('AUTHENTICATED', payload);
 });
 
 socket.on('MAIN', (payload) => {
@@ -68,6 +113,7 @@ socket.on('MAIN', (payload) => {
 });
 
 socket.on('START', (payload) => {
+  console.log('payload in start: ', payload);
 
   inquirer
     .prompt([
@@ -127,7 +173,7 @@ socket.on('LOST', (payload) => {
     },
   ])
     .then(answers => {
-      socket.emit('LOGGED_IN', payload);
+      socket.emit('RETURN_TO_MAIN', payload);
     });
 
 });
@@ -149,7 +195,7 @@ socket.on('DISPLAY_HIGH_SCORES', (payload) => {
     },
   ])
     .then(answers => {
-      socket.emit('LOGGED_IN', payload);
+      socket.emit('RETURN_TO_MAIN', payload);
     });
 
 });
