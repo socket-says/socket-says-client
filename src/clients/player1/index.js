@@ -5,6 +5,7 @@ require('dotenv').config();
 const PORT = process.env.PORT || 3002;
 const socket = io(`http://localhost:${PORT}/socket-says`);
 const inquirer = require('inquirer');
+const chalk = require('chalk');
 const join = 'join';
 
 socket.emit('JOIN', join);
@@ -25,14 +26,14 @@ socket.on('LOG_IN', () => {
       },
     ])
     .then(answers => {
-      console.info('Username:', answers);
+      console.info(chalk.cyan('Username:', answers.username));
+      console.info(chalk.red('Password:', answers.password));
       let payload = {
         username: answers.username,
         password: answers.password,
-        sequence: getFirstSequence(),
+        sequence: getRandomColor() + ' ',
         score: 0,
       };
-      console.log(payload);
       if (answers.username && answers.password) {
         socket.emit('LOGGED_IN', payload);
       }
@@ -47,7 +48,7 @@ socket.on('MAIN', (payload) => {
       {
         type: 'list',
         name: 'main',
-        message: 'What would you like to do?',
+        message: chalk.yellow('What would you like to do?'),
         choices: ['Play game', 'View high Scores'],
       },
     ])
@@ -73,10 +74,9 @@ socket.on('START', (payload) => {
       },
     ])
     .then(answers => {
-      console.info('Username:', answers);
       if (answers.sequenceMatch === payload.sequence) {
         payload.score++;
-        payload.sequence = payload.sequence + 'e';
+        payload.sequence = payload.sequence + getRandomColor() + ' ';
         socket.emit('CORRECT', payload);
       } else if (answers.sequenceMatch !== payload.sequence) {
         socket.emit('INCORRECT', payload);
@@ -97,9 +97,9 @@ socket.on('NEXT_SEQUENCE', (payload) => {
     ])
     .then(answers => {
       console.info('Username:', answers);
-      if (answers.sequenceMatch === payload.sequence) {
+      if (answers.sequenceMatch.toString() === payload.sequence) {
         payload.score++;
-        payload.sequence = payload.sequence + 'e';
+        payload.sequence = payload.sequence + getRandomColor() + ' ';
         socket.emit('CORRECT', payload);
       } else if (answers.sequenceMatch !== payload.sequence) {
         socket.emit('INCORRECT', payload);
@@ -109,7 +109,9 @@ socket.on('NEXT_SEQUENCE', (payload) => {
 });
 
 socket.on('LOST', (payload) => {
-  
+
+  payload.sequence = getRandomColor() + ' ';
+
   console.log('Incorrect, game over!');
   console.log(`Final Score: ${payload.score}`);
   inquirer.prompt([
@@ -117,7 +119,7 @@ socket.on('LOST', (payload) => {
       type: 'list',
       name: 'returnToMain',
       message: 'Hit Enter to return to Main',
-      choices: ['Return'],
+      choices: [chalk.yellow('Return')],
     },
   ])
     .then(answers => {
@@ -139,7 +141,7 @@ socket.on('DISPLAY_HIGH_SCORES', (payload) => {
       type: 'list',
       name: 'returnToMain',
       message: 'Hit Enter to return to Main',
-      choices: ['Return'],
+      choices: [chalk.yellow('Return')],
     },
   ])
     .then(answers => {
@@ -150,11 +152,31 @@ socket.on('DISPLAY_HIGH_SCORES', (payload) => {
 
 // helper functions ----------------
 
-function getFirstSequence() {
-  return 'abcd';
+function getRandomColor() {
+  // let colors = [chalk.red('r'), chalk.green('g'), chalk.cyan('b'), chalk.yellow('y')];
+  let colors = ['r', 'g', 'b', 'y'];
+  return colors[getRandomInt(0, 4)];
 }
 
-// function getRandom() {
-// let colors = ['r', 'g', 'b', 'y'];
-// return some random value from colors
-// }
+function getRandomInt(min, max) {
+  min = Math.ceil(min);
+  max = Math.floor(max);
+  return Math.floor(Math.random() * (max - min) + min); //The maximum is exclusive and the minimum is inclusive
+}
+
+
+function toChalkCase(input) {
+  if (input === 'r') {
+    input = chalk.red('r');
+  }
+  if (input === 'g') {
+    input = chalk.green('g');
+  }
+  if (input === 'b') {
+    input = chalk.cyan('b');
+  }
+  if (input === 'y') {
+    input = chalk.yellow('y');
+  }
+  return input;
+}
