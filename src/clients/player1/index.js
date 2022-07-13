@@ -2,13 +2,12 @@
 
 const { io } = require('socket.io-client');
 require('dotenv').config();
-const PORT =  process.env.PORT || 3002;
+const PORT = process.env.PORT || 3002;
 const socket = io(`http://localhost:${PORT}/socket-says`);
 const inquirer = require('inquirer');
 const chalk = require('chalk');
-const join = 'join';
+// const join = 'join';
 
-socket.emit('JOIN', join);
 
 socket.on('LOG_IN', () => {
 
@@ -42,8 +41,11 @@ socket.on('LOG_IN', () => {
 });
 
 socket.on('CHECKED_DB', (payload) => {
-  socket.emit('LOGGED_IN');
+  // full payload gets passed into join -gf
+  socket.emit('JOIN', payload);
 });
+
+
 
 socket.on('MAIN', (payload) => {
 
@@ -68,6 +70,11 @@ socket.on('MAIN', (payload) => {
 });
 
 socket.on('START', (payload) => {
+  // takes in player-specific payload
+  // uses sequence and score in player's payload for gameplay and increments accordingly
+
+  // reset score to 0, in case player got here from returning to main after a loss, so previous score does not persist in payload
+  payload.score = 0;
 
   inquirer
     .prompt([
@@ -79,6 +86,7 @@ socket.on('START', (payload) => {
     ])
     .then(answers => {
       if (answers.sequenceMatch === payload.sequence) {
+        console.log('Correct!');
         payload.score++;
         payload.sequence = payload.sequence + getRandomColor() + ' ';
         socket.emit('CORRECT', payload);
@@ -86,11 +94,11 @@ socket.on('START', (payload) => {
         socket.emit('INCORRECT', payload);
       }
     });
-
 });
 
 socket.on('NEXT_SEQUENCE', (payload) => {
-
+  // takes in player-specific payload
+  // uses sequence and score in player's payload for gameplay and increments accordingly
   inquirer
     .prompt([
       {
@@ -102,6 +110,7 @@ socket.on('NEXT_SEQUENCE', (payload) => {
     .then(answers => {
       console.info('Username:', answers);
       if (answers.sequenceMatch.toString() === payload.sequence) {
+        console.log('Correct!');
         payload.score++;
         payload.sequence = payload.sequence + getRandomColor() + ' ';
         socket.emit('CORRECT', payload);
@@ -113,10 +122,11 @@ socket.on('NEXT_SEQUENCE', (payload) => {
 });
 
 socket.on('LOST', (payload) => {
-
+  // takes in player-specific payload
+  // logs that player's final score
   payload.sequence = getRandomColor() + ' ';
 
-  console.log('Incorrect, game over!');
+  console.log(`Sorry ${payload.username}, that's incorrect! Game Over`);
   console.log(`Final Score: ${payload.score}`);
   inquirer.prompt([
     {
@@ -127,7 +137,8 @@ socket.on('LOST', (payload) => {
     },
   ])
     .then(answers => {
-      socket.emit('LOGGED_IN', payload);
+      // created new event RETURN_TO_MAIN so player could return to main menu without needing to re-join a room
+      socket.emit('RETURN_TO_MAIN', payload);
     });
 
 });
