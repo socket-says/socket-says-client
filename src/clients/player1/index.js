@@ -2,7 +2,7 @@
 
 const { io } = require('socket.io-client');
 require('dotenv').config();
-const PORT = process.env.PORT || 3002;
+const PORT =  process.env.PORT || 3002;
 const socket = io(`http://localhost:${PORT}/socket-says`);
 const inquirer = require('inquirer');
 const chalk = require('chalk');
@@ -35,10 +35,14 @@ socket.on('LOG_IN', () => {
         score: 0,
       };
       if (answers.username && answers.password) {
-        socket.emit('LOGGED_IN', payload);
+        socket.emit('CHECK_DB', payload);
       }
     });
 
+});
+
+socket.on('CHECKED_DB', (payload) => {
+  socket.emit('LOGGED_IN');
 });
 
 socket.on('MAIN', (payload) => {
