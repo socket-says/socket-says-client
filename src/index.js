@@ -30,6 +30,7 @@ socket.on('LOG_IN', () => {
 });
 
 socket.on('PLAYER_EXISTS', (payload) => {
+
   inquirer
     .prompt([
       {
@@ -44,10 +45,7 @@ socket.on('PLAYER_EXISTS', (payload) => {
       payload.user.Highscore = 0;
       payload.sequence = getRandomColor() + ' ';
 
-      console.log('player exists payload after adding pass/highscore: ', payload);
-
       if (payload.user.Username && answers.password) {
-        console.log('payload.user.username && answers.password');
         socket.emit('AUTHENTICATED', payload);
       }
 
@@ -77,8 +75,6 @@ socket.on('NEW_PLAYER', (payload) => {
       payload.user.Password = answers.password;
       payload.user.Highscore = 0;
       payload.sequence = getRandomColor() + ' ';
-
-      console.log('new player, payload after adding pass/highscore: ', payload);
 
       socket.emit('CREATE', payload);
 
@@ -113,7 +109,6 @@ socket.on('MAIN', (payload) => {
 });
 
 socket.on('START', (payload) => {
-  console.log('payload in start: ', payload);
 
   inquirer
     .prompt([
@@ -146,7 +141,6 @@ socket.on('NEXT_SEQUENCE', (payload) => {
       },
     ])
     .then(answers => {
-      console.info('Username:', answers);
       if (answers.sequenceMatch.toString() === payload.sequence) {
         payload.score++;
         payload.sequence = payload.sequence + getRandomColor() + ' ';
@@ -180,7 +174,7 @@ socket.on('LOST', (payload) => {
 
 socket.on('DISPLAY_HIGH_SCORES', (payload) => {
 
-  console.log('| -- Player -- | -- Score -- |');
+  console.log('| --- Player --- | -- Score -- |');
   console.log('| -- Player 1 -- | -- 3 -- |');
   console.log('| -- Player 2 -- | -- 6 -- |');
   console.log('| -- Player 3 -- | -- 9 -- |');
@@ -212,21 +206,4 @@ function getRandomInt(min, max) {
   min = Math.ceil(min);
   max = Math.floor(max);
   return Math.floor(Math.random() * (max - min) + min); //The maximum is exclusive and the minimum is inclusive
-}
-
-
-function toChalkCase(input) {
-  if (input === 'r') {
-    input = chalk.red('r');
-  }
-  if (input === 'g') {
-    input = chalk.green('g');
-  }
-  if (input === 'b') {
-    input = chalk.cyan('b');
-  }
-  if (input === 'y') {
-    input = chalk.yellow('y');
-  }
-  return input;
 }
