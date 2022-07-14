@@ -44,6 +44,7 @@ socket.on('PLAYER_EXISTS', (payload) => {
       payload.user.Password = answers.password;
       payload.user.Highscore = 0;
       payload.sequence = getRandomColor() + ' ';
+      payload.gameScore = 0;
 
       if (payload.user.Username && answers.password) {
         socket.emit('AUTHENTICATED', payload);
@@ -75,6 +76,7 @@ socket.on('NEW_PLAYER', (payload) => {
       payload.user.Password = answers.password;
       payload.user.Highscore = 0;
       payload.sequence = getRandomColor() + ' ';
+      payload.gameScore = 0;
 
       socket.emit('CREATE', payload);
 
@@ -109,6 +111,12 @@ socket.on('MAIN', (payload) => {
 });
 
 socket.on('START', (payload) => {
+  // takes in player-specific payload
+  // uses sequence and score in player's payload for gameplay and increments accordingly
+
+  // reset score to 0, in case player got here from returning to main after a loss, so previous score does not persist in payload
+  payload.score = 0;
+  console.log('payload in start: ', payload);
 
   inquirer
     .prompt([
@@ -120,7 +128,7 @@ socket.on('START', (payload) => {
     ])
     .then(answers => {
       if (answers.sequenceMatch === payload.sequence) {
-        payload.score++;
+        payload.gameScore++;
         payload.sequence = payload.sequence + getRandomColor() + ' ';
         socket.emit('CORRECT', payload);
       } else if (answers.sequenceMatch !== payload.sequence) {
@@ -131,7 +139,8 @@ socket.on('START', (payload) => {
 });
 
 socket.on('NEXT_SEQUENCE', (payload) => {
-
+  // takes in player-specific payload
+  // uses sequence and score in player's payload for gameplay and increments accordingly
   inquirer
     .prompt([
       {
@@ -142,7 +151,7 @@ socket.on('NEXT_SEQUENCE', (payload) => {
     ])
     .then(answers => {
       if (answers.sequenceMatch.toString() === payload.sequence) {
-        payload.score++;
+        payload.gameScore++;
         payload.sequence = payload.sequence + getRandomColor() + ' ';
         socket.emit('CORRECT', payload);
       } else if (answers.sequenceMatch !== payload.sequence) {
@@ -153,11 +162,12 @@ socket.on('NEXT_SEQUENCE', (payload) => {
 });
 
 socket.on('LOST', (payload) => {
-
+  // takes in player-specific payload
+  // logs that player's final score
   payload.sequence = getRandomColor() + ' ';
 
-  console.log('Incorrect, game over!');
-  console.log(`Final Score: ${payload.score}`);
+  console.log(`Sorry ${payload.user.Username}, that's incorrect! Game Over`);
+  console.log(`Final Score: ${payload.gameScore}`);
   inquirer.prompt([
     {
       type: 'list',
@@ -167,6 +177,7 @@ socket.on('LOST', (payload) => {
     },
   ])
     .then(answers => {
+      // created new event RETURN_TO_MAIN so player could return to main menu without needing to re-join a room
       socket.emit('RETURN_TO_MAIN', payload);
     });
 
@@ -206,4 +217,5 @@ function getRandomInt(min, max) {
   min = Math.ceil(min);
   max = Math.floor(max);
   return Math.floor(Math.random() * (max - min) + min); //The maximum is exclusive and the minimum is inclusive
+
 }
