@@ -37,7 +37,7 @@ socket.on('PLAYER_EXISTS', (payload) => {
       {
         type: 'input',
         name: 'password',
-        message: 'What is your password?',
+        message: `Welcome back, ${payload.user.Username}! Please enter your password:`,
       },
     ])
     .then((answers) => {
@@ -45,7 +45,7 @@ socket.on('PLAYER_EXISTS', (payload) => {
       payload.user.Password = answers.password;
       payload.user.Highscore = 0;
       payload.sequence = getRandomColor() + ' ';
-
+      payload.gameScore = 0;
       if (payload.user.Username && answers.password) {
         socket.emit('CHECK_PASSWORD', payload);
       }
@@ -56,23 +56,9 @@ socket.on('HANDOFF', (payload) => {
   socket.emit('AUTHENTICATED', payload);
 });
 
-// let foundUser;
-// let valid;
-// let username = payload.user.Username;
-// console.log(username);
-// try {
-//   foundUser = await PlayerData.findOne({ Username: username });
-//   console.log(foundUser);
-//   valid = bcrypt.compare(answers.password, foundUser.Password);
-// } catch (e) {
-//   console.log(e.message);
-// }
-
-// authenticate password
-
 socket.on('NEW_PLAYER', (payload) => {
 
-  console.log('Username does not exist, create your account by inputting a password');
+  console.log('User does not exist, please create your account by entering a password:');
 
   inquirer
     .prompt([
@@ -86,18 +72,15 @@ socket.on('NEW_PLAYER', (payload) => {
       payload.user.Password = answers.password;
       payload.user.Highscore = 0;
       payload.sequence = getRandomColor() + ' ';
-
+      payload.gameScore = 0;
       payload.user.Password = await bcrypt.hash(payload.user.Password, 10);
 
-      console.log('new player, payload after adding pass/highscore: ', payload);
-
       socket.emit('CREATE', payload);
-
     });
 });
 
 socket.on('CREATED_NEW', (payload) => {
-  console.log('Your account has been created, you may now join');
+  console.log('Your account has been created, you may now join!');
   socket.emit('AUTHENTICATED', payload);
 });
 
@@ -113,7 +96,6 @@ socket.on('MAIN', (payload) => {
       },
     ])
     .then(answers => {
-      console.info('Answer: ', answers.main);
       if (answers.main === 'Play game') {
         socket.emit('PLAY_GAME', payload);
       } else if (answers.main === 'View high Scores') {
@@ -124,7 +106,8 @@ socket.on('MAIN', (payload) => {
 });
 
 socket.on('START', (payload) => {
-  console.log('payload in start: ', payload);
+
+  payload.gameScore = 0;
 
   inquirer
     .prompt([
@@ -136,7 +119,7 @@ socket.on('START', (payload) => {
     ])
     .then(answers => {
       if (answers.sequenceMatch === payload.sequence) {
-        payload.score++;
+        payload.gameScore++;
         payload.sequence = payload.sequence + getRandomColor() + ' ';
         socket.emit('CORRECT', payload);
       } else if (answers.sequenceMatch !== payload.sequence) {
@@ -153,13 +136,12 @@ socket.on('NEXT_SEQUENCE', (payload) => {
       {
         type: 'input',
         name: 'sequenceMatch',
-        message: `Match this sequence: ${payload.sequence}`,
+        message: `That's correct! Please match NEW sequence: ${payload.sequence}`,
       },
     ])
     .then(answers => {
-      console.info('Username:', answers);
       if (answers.sequenceMatch.toString() === payload.sequence) {
-        payload.score++;
+        payload.gameScore++;
         payload.sequence = payload.sequence + getRandomColor() + ' ';
         socket.emit('CORRECT', payload);
       } else if (answers.sequenceMatch !== payload.sequence) {
@@ -174,7 +156,7 @@ socket.on('LOST', (payload) => {
   payload.sequence = getRandomColor() + ' ';
 
   console.log('Incorrect, game over!');
-  console.log(`Final Score: ${payload.score}`);
+  console.log(`Final Score: ${payload.gameScore}`);
   inquirer.prompt([
     {
       type: 'list',
@@ -186,12 +168,11 @@ socket.on('LOST', (payload) => {
     .then(answers => {
       socket.emit('RETURN_TO_MAIN', payload);
     });
-
 });
 
 socket.on('DISPLAY_HIGH_SCORES', (payload) => {
 
-  console.log('| -- Player -- | -- Score -- |');
+  console.log('| --- Player --- | -- Score -- |');
   console.log('| -- Player 1 -- | -- 3 -- |');
   console.log('| -- Player 2 -- | -- 6 -- |');
   console.log('| -- Player 3 -- | -- 9 -- |');
@@ -224,7 +205,6 @@ function getRandomInt(min, max) {
   max = Math.floor(max);
   return Math.floor(Math.random() * (max - min) + min); //The maximum is exclusive and the minimum is inclusive
 }
-
 
 function toChalkCase(input) {
   if (input === 'r') {
