@@ -7,7 +7,6 @@ const socket = io(`http://localhost:${PORT}/socket-says`);
 const inquirer = require('inquirer');
 const chalk = require('chalk');
 const bcrypt = require('bcrypt');
-const PlayerData = require('./dbModel');
 
 socket.on('LOG_IN', () => {
 
@@ -32,6 +31,7 @@ socket.on('LOG_IN', () => {
 });
 
 socket.on('PLAYER_EXISTS', (payload) => {
+
   inquirer
     .prompt([
       {
@@ -40,40 +40,35 @@ socket.on('PLAYER_EXISTS', (payload) => {
         message: 'What is your password?',
       },
     ])
-    .then( async (answers) => {
+    .then((answers) => {
 
       payload.user.Password = answers.password;
       payload.user.Highscore = 0;
       payload.sequence = getRandomColor() + ' ';
 
-      console.log('player exists payload after adding pass/highscore: ', payload);
-
-      let foundUser;
-      let valid;
-      let { Username } = payload.user;
-      console.log({Username});
-      try {
-        foundUser = await PlayerData.find({ Username } );
-        console.log(foundUser);
-        valid = bcrypt.compare(answers.password, foundUser.Password);
-      } catch (e) {
-        console.log(e.message);
+      if (payload.user.Username && answers.password) {
+        socket.emit('CHECK_PASSWORD', payload);
       }
-      if (payload.user.Username && answers.password && valid) {
-        console.log('payload.user.Username && answers.password');
-        socket.emit('AUTHENTICATED', payload);
-      }
-
-
-      // authenticate password
-
-      //if answers.username && answers.password(authenticated) {
-      // socket.emit('AUTHENTICATED', payload);
-      // }
-
     });
-
 });
+
+socket.on('HANDOFF', (payload) => {
+  socket.emit('AUTHENTICATED', payload);
+});
+
+// let foundUser;
+// let valid;
+// let username = payload.user.Username;
+// console.log(username);
+// try {
+//   foundUser = await PlayerData.findOne({ Username: username });
+//   console.log(foundUser);
+//   valid = bcrypt.compare(answers.password, foundUser.Password);
+// } catch (e) {
+//   console.log(e.message);
+// }
+
+// authenticate password
 
 socket.on('NEW_PLAYER', (payload) => {
 
