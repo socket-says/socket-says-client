@@ -6,6 +6,8 @@ const PORT = process.env.PORT || 3002;
 const socket = io(`http://localhost:${PORT}/socket-says`);
 const inquirer = require('inquirer');
 const chalk = require('chalk');
+const bcrypt = require('bcrypt');
+const PlayerData = require('./dbModel');
 
 socket.on('LOG_IN', () => {
 
@@ -38,7 +40,7 @@ socket.on('PLAYER_EXISTS', (payload) => {
         message: 'What is your password?',
       },
     ])
-    .then((answers) => {
+    .then( async (answers) => {
 
       payload.user.Password = answers.password;
       payload.user.Highscore = 0;
@@ -46,10 +48,22 @@ socket.on('PLAYER_EXISTS', (payload) => {
 
       console.log('player exists payload after adding pass/highscore: ', payload);
 
-      if (payload.user.Username && answers.password) {
-        console.log('payload.user.username && answers.password');
+      let foundUser;
+      let valid;
+      let { Username } = payload.user;
+      console.log({Username});
+      try {
+        foundUser = await PlayerData.find({ Username } );
+        console.log(foundUser);
+        valid = bcrypt.compare(answers.password, foundUser.Password);
+      } catch (e) {
+        console.log(e.message);
+      }
+      if (payload.user.Username && answers.password && valid) {
+        console.log('payload.user.Username && answers.password');
         socket.emit('AUTHENTICATED', payload);
       }
+
 
       // authenticate password
 
@@ -73,10 +87,12 @@ socket.on('NEW_PLAYER', (payload) => {
         message: 'What is your password?',
       },
     ])
-    .then(answers => {
+    .then(async (answers) => {
       payload.user.Password = answers.password;
       payload.user.Highscore = 0;
       payload.sequence = getRandomColor() + ' ';
+
+      payload.user.Password = await bcrypt.hash(payload.user.Password, 10);
 
       console.log('new player, payload after adding pass/highscore: ', payload);
 
