@@ -7,6 +7,9 @@ const socket = io(`http://localhost:${PORT}/socket-says`);
 const inquirer = require('inquirer');
 const chalk = require('chalk');
 
+// const createHandleLogin = require('./handlers/handleLogin');
+// const handleLogin = createHandleLogin(socket);
+
 socket.on('LOG_IN', () => {
 
   inquirer
@@ -29,7 +32,11 @@ socket.on('LOG_IN', () => {
 
 });
 
+// const createHandlePlayerExists = require('./handlers/handlePlayerExists');
+// const handlePlayerExists = createHandlePlayerExists(socket);
+
 socket.on('PLAYER_EXISTS', (payload) => {
+
   inquirer
     .prompt([
       {
@@ -230,3 +237,10 @@ function toChalkCase(input) {
   }
   return input;
 }
+
+module.exports = {
+  socket,
+  PORT,
+  chalk,
+  getRandomColor,
+};
