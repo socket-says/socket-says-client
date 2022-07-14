@@ -6,6 +6,7 @@ const PORT = process.env.PORT || 3002;
 const socket = io(`http://localhost:${PORT}/socket-says`);
 const inquirer = require('inquirer');
 const chalk = require('chalk');
+const bcrypt = require('bcrypt');
 
 socket.on('LOG_IN', () => {
 
@@ -36,7 +37,7 @@ socket.on('PLAYER_EXISTS', (payload) => {
       {
         type: 'input',
         name: 'password',
-        message: 'What is your password?',
+        message: `Welcome back, ${payload.user.Username}! Please enter your password:`,
       },
     ])
     .then((answers) => {
@@ -44,24 +45,20 @@ socket.on('PLAYER_EXISTS', (payload) => {
       payload.user.Password = answers.password;
       payload.user.Highscore = 0;
       payload.sequence = getRandomColor() + ' ';
-
+      payload.gameScore = 0;
       if (payload.user.Username && answers.password) {
-        socket.emit('AUTHENTICATED', payload);
+        socket.emit('CHECK_PASSWORD', payload);
       }
-
-      // authenticate password
-
-      //if answers.username && answers.password(authenticated) {
-      // socket.emit('AUTHENTICATED', payload);
-      // }
-
     });
+});
 
+socket.on('HANDOFF', (payload) => {
+  socket.emit('AUTHENTICATED', payload);
 });
 
 socket.on('NEW_PLAYER', (payload) => {
 
-  console.log('Username does not exist, create your account by inputting a password');
+  console.log('User does not exist, please create your account by entering a password:');
 
   inquirer
     .prompt([
@@ -71,18 +68,19 @@ socket.on('NEW_PLAYER', (payload) => {
         message: 'What is your password?',
       },
     ])
-    .then(answers => {
+    .then(async (answers) => {
       payload.user.Password = answers.password;
       payload.user.Highscore = 0;
       payload.sequence = getRandomColor() + ' ';
+      payload.gameScore = 0;
+      payload.user.Password = await bcrypt.hash(payload.user.Password, 10);
 
       socket.emit('CREATE', payload);
-
     });
 });
 
 socket.on('CREATED_NEW', (payload) => {
-  console.log('Your account has been created, you may now join');
+  console.log('Your account has been created, you may now join!');
   socket.emit('AUTHENTICATED', payload);
 });
 
@@ -98,7 +96,6 @@ socket.on('MAIN', (payload) => {
       },
     ])
     .then(answers => {
-      console.info('Answer: ', answers.main);
       if (answers.main === 'Play game') {
         socket.emit('PLAY_GAME', payload);
       } else if (answers.main === 'View high Scores') {
@@ -110,6 +107,8 @@ socket.on('MAIN', (payload) => {
 
 socket.on('START', (payload) => {
 
+  payload.gameScore = 0;
+
   inquirer
     .prompt([
       {
@@ -120,7 +119,7 @@ socket.on('START', (payload) => {
     ])
     .then(answers => {
       if (answers.sequenceMatch === payload.sequence) {
-        payload.score++;
+        payload.gameScore++;
         payload.sequence = payload.sequence + getRandomColor() + ' ';
         socket.emit('CORRECT', payload);
       } else if (answers.sequenceMatch !== payload.sequence) {
@@ -137,12 +136,12 @@ socket.on('NEXT_SEQUENCE', (payload) => {
       {
         type: 'input',
         name: 'sequenceMatch',
-        message: `Match this sequence: ${payload.sequence}`,
+        message: `That's correct! Please match NEW sequence: ${payload.sequence}`,
       },
     ])
     .then(answers => {
       if (answers.sequenceMatch.toString() === payload.sequence) {
-        payload.score++;
+        payload.gameScore++;
         payload.sequence = payload.sequence + getRandomColor() + ' ';
         socket.emit('CORRECT', payload);
       } else if (answers.sequenceMatch !== payload.sequence) {
@@ -157,7 +156,7 @@ socket.on('LOST', (payload) => {
   payload.sequence = getRandomColor() + ' ';
 
   console.log('Incorrect, game over!');
-  console.log(`Final Score: ${payload.score}`);
+  console.log(`Final Score: ${payload.gameScore}`);
   inquirer.prompt([
     {
       type: 'list',
@@ -169,7 +168,6 @@ socket.on('LOST', (payload) => {
     .then(answers => {
       socket.emit('RETURN_TO_MAIN', payload);
     });
-
 });
 
 socket.on('DISPLAY_HIGH_SCORES', (payload) => {
@@ -206,4 +204,20 @@ function getRandomInt(min, max) {
   min = Math.ceil(min);
   max = Math.floor(max);
   return Math.floor(Math.random() * (max - min) + min); //The maximum is exclusive and the minimum is inclusive
+}
+
+function toChalkCase(input) {
+  if (input === 'r') {
+    input = chalk.red('r');
+  }
+  if (input === 'g') {
+    input = chalk.green('g');
+  }
+  if (input === 'b') {
+    input = chalk.cyan('b');
+  }
+  if (input === 'y') {
+    input = chalk.yellow('y');
+  }
+  return input;
 }
