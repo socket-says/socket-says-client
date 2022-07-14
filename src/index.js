@@ -6,6 +6,7 @@ const PORT = process.env.PORT || 3002;
 const socket = io(`http://localhost:${PORT}/socket-says`);
 const inquirer = require('inquirer');
 const chalk = require('chalk');
+const bcrypt = require('bcrypt');
 
 socket.on('LOG_IN', () => {
 
@@ -44,21 +45,30 @@ socket.on('PLAYER_EXISTS', (payload) => {
       payload.user.Password = answers.password;
       payload.user.Highscore = 0;
       payload.sequence = getRandomColor() + ' ';
-      payload.gameScore = 0;
 
       if (payload.user.Username && answers.password) {
-        socket.emit('AUTHENTICATED', payload);
+        socket.emit('CHECK_PASSWORD', payload);
       }
-
-      // authenticate password
-
-      //if answers.username && answers.password(authenticated) {
-      // socket.emit('AUTHENTICATED', payload);
-      // }
-
     });
-
 });
+
+socket.on('HANDOFF', (payload) => {
+  socket.emit('AUTHENTICATED', payload);
+});
+
+// let foundUser;
+// let valid;
+// let username = payload.user.Username;
+// console.log(username);
+// try {
+//   foundUser = await PlayerData.findOne({ Username: username });
+//   console.log(foundUser);
+//   valid = bcrypt.compare(answers.password, foundUser.Password);
+// } catch (e) {
+//   console.log(e.message);
+// }
+
+// authenticate password
 
 socket.on('NEW_PLAYER', (payload) => {
 
@@ -72,11 +82,14 @@ socket.on('NEW_PLAYER', (payload) => {
         message: 'What is your password?',
       },
     ])
-    .then(answers => {
+    .then(async (answers) => {
       payload.user.Password = answers.password;
       payload.user.Highscore = 0;
       payload.sequence = getRandomColor() + ' ';
-      payload.gameScore = 0;
+
+      payload.user.Password = await bcrypt.hash(payload.user.Password, 10);
+
+      console.log('new player, payload after adding pass/highscore: ', payload);
 
       socket.emit('CREATE', payload);
 
@@ -111,11 +124,6 @@ socket.on('MAIN', (payload) => {
 });
 
 socket.on('START', (payload) => {
-  // takes in player-specific payload
-  // uses sequence and score in player's payload for gameplay and increments accordingly
-
-  // reset score to 0, in case player got here from returning to main after a loss, so previous score does not persist in payload
-  payload.score = 0;
   console.log('payload in start: ', payload);
 
   inquirer
@@ -128,7 +136,7 @@ socket.on('START', (payload) => {
     ])
     .then(answers => {
       if (answers.sequenceMatch === payload.sequence) {
-        payload.gameScore++;
+        payload.score++;
         payload.sequence = payload.sequence + getRandomColor() + ' ';
         socket.emit('CORRECT', payload);
       } else if (answers.sequenceMatch !== payload.sequence) {
@@ -139,8 +147,7 @@ socket.on('START', (payload) => {
 });
 
 socket.on('NEXT_SEQUENCE', (payload) => {
-  // takes in player-specific payload
-  // uses sequence and score in player's payload for gameplay and increments accordingly
+
   inquirer
     .prompt([
       {
@@ -150,8 +157,9 @@ socket.on('NEXT_SEQUENCE', (payload) => {
       },
     ])
     .then(answers => {
+      console.info('Username:', answers);
       if (answers.sequenceMatch.toString() === payload.sequence) {
-        payload.gameScore++;
+        payload.score++;
         payload.sequence = payload.sequence + getRandomColor() + ' ';
         socket.emit('CORRECT', payload);
       } else if (answers.sequenceMatch !== payload.sequence) {
@@ -162,12 +170,11 @@ socket.on('NEXT_SEQUENCE', (payload) => {
 });
 
 socket.on('LOST', (payload) => {
-  // takes in player-specific payload
-  // logs that player's final score
+
   payload.sequence = getRandomColor() + ' ';
 
-  console.log(`Sorry ${payload.user.Username}, that's incorrect! Game Over`);
-  console.log(`Final Score: ${payload.gameScore}`);
+  console.log('Incorrect, game over!');
+  console.log(`Final Score: ${payload.score}`);
   inquirer.prompt([
     {
       type: 'list',
@@ -177,7 +184,6 @@ socket.on('LOST', (payload) => {
     },
   ])
     .then(answers => {
-      // created new event RETURN_TO_MAIN so player could return to main menu without needing to re-join a room
       socket.emit('RETURN_TO_MAIN', payload);
     });
 
@@ -185,7 +191,7 @@ socket.on('LOST', (payload) => {
 
 socket.on('DISPLAY_HIGH_SCORES', (payload) => {
 
-  console.log('| --- Player --- | -- Score -- |');
+  console.log('| -- Player -- | -- Score -- |');
   console.log('| -- Player 1 -- | -- 3 -- |');
   console.log('| -- Player 2 -- | -- 6 -- |');
   console.log('| -- Player 3 -- | -- 9 -- |');
@@ -217,5 +223,21 @@ function getRandomInt(min, max) {
   min = Math.ceil(min);
   max = Math.floor(max);
   return Math.floor(Math.random() * (max - min) + min); //The maximum is exclusive and the minimum is inclusive
+}
 
+
+function toChalkCase(input) {
+  if (input === 'r') {
+    input = chalk.red('r');
+  }
+  if (input === 'g') {
+    input = chalk.green('g');
+  }
+  if (input === 'b') {
+    input = chalk.cyan('b');
+  }
+  if (input === 'y') {
+    input = chalk.yellow('y');
+  }
+  return input;
 }
