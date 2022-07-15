@@ -59,14 +59,14 @@ socket.on('HANDOFF', (payload) => {
 
 socket.on('NEW_PLAYER', (payload) => {
 
-  console.log('User does not exist, please create your account by entering a password:');
+  // console.log('User does not exist, please create your account by entering a password:');
 
   inquirer
     .prompt([
       {
         type: 'input',
         name: 'password',
-        message: 'What is your password?',
+        message: 'User does not exist, please create your account by entering a password:',
       },
     ])
     .then(async (answers) => {
@@ -108,17 +108,22 @@ socket.on('MAIN', (payload) => {
 
 socket.on('PLAYER_JOINED', (payload) => {
   console.log(`
-  ${payload.user.Username} has started a game!`);
+  ${payload.user.Username} has joined the gaming area.`);
+});
+
+socket.on('PLAYER_STARTED', (payload) => {
+  console.log(`
+  ${payload.user.Username} has started a new game!`);
 });
 
 socket.on('PLAYER_WON', (payload) => {
   console.log(`
-  ${payload.user.Username} has won a round! Their current score is ${payload.gameScore}`);
+  ${payload.user.Username} has won a round! Their current score is ${payload.gameScore}.`);
 });
 
 socket.on('PLAYER_LOST', (payload) => {
   console.log(`
-  ${payload.user.Username} has lost! Their final score was ${payload.gameScore}`);
+  ${payload.user.Username} has lost! Their final score was ${payload.gameScore}.`);
 });
 
 socket.on('START', (payload) => {
@@ -130,7 +135,7 @@ socket.on('START', (payload) => {
       {
         type: 'input',
         name: 'sequenceMatch',
-        message: `Match this sequence: ${payload.sequence}`,
+        message: chalk.red(`Match this sequence: `) + chalk.cyan(`${payload.sequence}`),
       },
     ])
     .then(answers => {
@@ -152,7 +157,7 @@ socket.on('NEXT_SEQUENCE', (payload) => {
       {
         type: 'input',
         name: 'sequenceMatch',
-        message: `That's correct! Please match NEW sequence: ${payload.sequence}`,
+        message: chalk.red(`That's correct! Please match NEW sequence: `) + chalk.cyan(`${payload.sequence}`),
       },
     ])
     .then(answers => {
@@ -188,11 +193,17 @@ socket.on('LOST', (payload) => {
 
 socket.on('DISPLAY_HIGH_SCORES', (payload) => {
 
+  console.log('');
   console.log('| --- Player --- | -- Score -- |');
-  console.log('| -- Player 1 -- | -- 3 -- |');
-  console.log('| -- Player 2 -- | -- 6 -- |');
-  console.log('| -- Player 3 -- | -- 9 -- |');
-  console.log('| -- Player 4 -- | -- 10 -- |');
+  console.log('| --- Brady ---- | ---- 15 --- |');
+  console.log('| --- Simon ---- | ---- 13 --- |');
+  console.log('| --- Andrew --- | ---- 12 --- |');
+  console.log('| --- Joe ------ | ---- 10 --- |');
+  console.log('| --- Tommy ---- | ---- 8 ---- |');
+  console.log('| --- Lisa ----- | ---- 6 ---- |');
+  console.log('| --- Jim ------ | ---- 3 ---- |');
+  console.log('');
+
   // calls function to display high scores
   inquirer.prompt([
     {
@@ -222,18 +233,18 @@ function getRandomInt(min, max) {
   return Math.floor(Math.random() * (max - min) + min); //The maximum is exclusive and the minimum is inclusive
 }
 
-function toChalkCase(input) {
-  if (input === 'r') {
-    input = chalk.red('r');
-  }
-  if (input === 'g') {
-    input = chalk.green('g');
-  }
-  if (input === 'b') {
-    input = chalk.cyan('b');
-  }
-  if (input === 'y') {
-    input = chalk.yellow('y');
-  }
-  return input;
-}
+// function toChalkCase(input) {
+//   if (input === 'r') {
+//     input = chalk.red('r');
+//   }
+//   if (input === 'g') {
+//     input = chalk.green('g');
+//   }
+//   if (input === 'b') {
+//     input = chalk.cyan('b');
+//   }
+//   if (input === 'y') {
+//     input = chalk.yellow('y');
+//   }
+//   return input;
+// }
