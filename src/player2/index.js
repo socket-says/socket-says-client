@@ -111,6 +111,16 @@ socket.on('PLAYER_JOINED', (payload) => {
   ${payload.user.Username} has started a game!`);
 });
 
+socket.on('PLAYER_WON', (payload) => {
+  console.log(`
+  ${payload.user.Username} has won a round! Their current score is ${payload.gameScore}`);
+});
+
+socket.on('PLAYER_LOST', (payload) => {
+  console.log(`
+  ${payload.user.Username} has lost! Their final score was ${payload.gameScore}`);
+});
+
 socket.on('START', (payload) => {
 
   payload.gameScore = 0;
