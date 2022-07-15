@@ -8,7 +8,7 @@ const inquirer = require('inquirer');
 const chalk = require('chalk');
 const bcrypt = require('bcrypt');
 
-socket.on('LOG_IN', () => {
+socket.on('LOG_IN', (socketId) => {
 
   inquirer
     .prompt([
@@ -23,6 +23,7 @@ socket.on('LOG_IN', () => {
       let payload = {
         user: {
           Username: answers.username,
+          socketId: socketId,
         },
       };
       socket.emit('CHECK_USERNAME', payload);
@@ -103,6 +104,11 @@ socket.on('MAIN', (payload) => {
       }
     });
 
+});
+
+socket.on('PLAYER_JOINED', (payload) => {
+  console.log(`
+  ${payload.user.Username} has started a game!`);
 });
 
 socket.on('START', (payload) => {
